@@ -2,59 +2,189 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Grid + Joystick Test</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>Crazy Kitchen: Overcooked Exam Escape</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;700;800&family=Patrick+Hand&display=swap" rel="stylesheet">
 <style>
-  * { box-sizing: border-box; user-select: none; touch-action: none; }
-  body, html { margin: 0; padding: 0; width: 100vw; height: 100vh; overflow: hidden; background: #241505; font-family: sans-serif; }
+  :root{
+    --cream:#fff6e0; --orange:#ff8c42; --orange-dark:#e0672a;
+    --red:#e5533c; --yellow:#ffd23f; --yellow-dark:#e8b800;
+    --brown:#7a4a24; --brown-dark:#5c3618; --green:#4caf6f;
+    --navy:#2e2a3d; --postit:#fff6a8;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent; user-select:none; touch-action:none;}
+  html,body{
+    margin:0; padding:0; width:100vw; height:100vh; overflow:hidden;
+    background:#1a0c02; font-family:'Patrick Hand', cursive; color:var(--navy);
+  }
+  h1,h2,h3,.title-font{font-family:'Baloo 2', cursive;}
+  button{font-family:'Patrick Hand', cursive; cursor:pointer;}
+  #app{position:fixed; inset:0; display:flex; align-items:center; justify-content:center; overflow:hidden;}
+
+  /* SCREENS */
+  .screen { display: none; width: 100vw; height: 100vh; align-items: center; justify-content: center; padding: 12px; }
+  .screen.active { display: flex; flex-direction: column; }
+
+  .panel{
+    background:var(--cream); border:6px solid var(--brown); border-radius:22px;
+    box-shadow:0 14px 0 var(--brown-dark), 0 20px 30px rgba(0,0,0,.35);
+    padding:24px; max-width:540px; width:100%; text-align:center;
+  }
+  .panel h1{font-size:clamp(26px,5vw,36px); color:var(--red); margin:0; text-shadow:3px 3px 0 var(--yellow);}
+  .field{margin:14px 0; text-align:left;}
+  .field label{font-size:15px; font-weight:700; display:block; margin-bottom:6px; color:var(--brown-dark);}
+  .field input[type=text]{
+    width:100%; padding:10px 12px; font-size:17px; border-radius:10px;
+    border:3px solid var(--orange); font-family:'Patrick Hand',cursive; background:#fff;
+    touch-action:auto;
+  }
+  .grid-3{display:grid; grid-template-columns:repeat(3, 1fr); gap:12px;}
+  .skin-card{
+    background:#fff; border:3px solid var(--brown); border-radius:12px; padding:10px;
+    display:flex; flex-direction:column; align-items:center; gap:6px; cursor:pointer;
+    box-shadow:0 4px 0 var(--brown-dark); transition:transform 0.1s;
+  }
+  .skin-card img{width:56px; height:56px; object-fit:contain;}
+  .skin-card.selected{border-color:var(--red); background:#fff3d1; transform:scale(1.08); box-shadow:0 0 0 3px var(--yellow);}
   
-  #game-container {
-    width: 100vw; height: 100vh; display: flex; align-items: center; justify-content: center;
+  .bigBtn{
+    background:var(--green); color:#fff; border:none; border-radius:12px; padding:12px 24px;
+    font-size:20px; font-weight:700; font-family:'Baloo 2',cursive; box-shadow:0 5px 0 #2c8350;
+  }
+  .bigBtn:active{transform:translateY(3px); box-shadow:0 2px 0 #2c8350;}
+  .bigBtn.secondary{background:var(--orange); box-shadow:0 5px 0 var(--orange-dark);}
+  .bigBtn:disabled{background:#aaa !important; box-shadow:0 5px 0 #777 !important; cursor:not-allowed;}
+
+  /* RESPONSIVE SCALING CONTAINER */
+  #stage-scaler {
+    position: relative; width: 960px; height: 540px; transform-origin: center center;
   }
 
-  /* COZINHA EM GRID RESPONSIVO 8x6 */
-  #grid-map {
-    position: relative;
-    width: 95vw; height: 95vh;
-    max-width: 900px; max-height: 500px;
-    background: #e6c89c; border: 5px solid #5c3618; border-radius: 16px;
-    display: grid;
-    grid-template-columns: repeat(8, 1fr);
-    grid-template-rows: repeat(6, 1fr);
-    gap: 4px; padding: 6px;
+  #game-map{
+    position:absolute; inset:0; width:960px; height:540px; background:#e6c89c;
+    border:6px solid var(--brown-dark); border-radius:12px; overflow:hidden;
+    box-shadow:0 0 40px rgba(0,0,0,.6);
+  }
+  
+  .countertop {
+    position:absolute; background:#8c532b; border:3px solid #5c3618; border-radius:8px;
+    box-shadow:inset 0 -4px 0 rgba(0,0,0,0.3); z-index:5;
   }
 
-  /* CELULAS DO GRID */
-  .cell {
-    background: rgba(140, 83, 43, 0.15); border-radius: 8px;
-    display: flex; align-items: center; justify-content: center;
-    position: relative;
+  /* LARGER STATION ICONS & BALCONIES */
+  .station-node{
+    position:absolute; width:90px; height:90px; border-radius:16px;
+    background:#fff8ea; border:3px solid var(--brown); display:flex;
+    align-items:center; justify-content:center; z-index:10;
+    box-shadow:0 4px 0 var(--brown-dark); padding:4px;
+  }
+  .station-node.done{background:#d7f5df; border-color:var(--green);}
+  .station-node img{width:100%; height:100%; object-fit:contain;}
+
+  /* LARGER AVATAR SPRITE */
+  .player-node{
+    position:absolute; z-index:20; transform:translate(-50%, -75%); pointer-events:none;
+    display:flex; flex-direction:column; align-items:center;
+  }
+  .player-node img{width:68px; height:68px; object-fit:contain;}
+  .player-node .pname{
+    font-family:'Patrick Hand', cursive; font-size:15px; font-weight:bold; color:#fff;
+    text-shadow:2px 2px 0 #000; margin-top:-6px; white-space:nowrap;
   }
 
-  /* BALCÕES / ESTAÇÕES */
-  .counter {
-    background: #8c532b; border: 3px solid #5c3618; border-radius: 10px;
-    width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;
+  /* HUD */
+  #hud-bar{
+    position:absolute; top:10px; left:10px; right:10px; display:flex; justify-content:space-between;
+    align-items:center; z-index:30; pointer-events:none;
   }
-  .counter img { width: 75%; height: 75%; object-fit: contain; }
-
-  /* AVATAR DENTRO DO GRID */
-  #player {
-    position: absolute; width: 48px; height: 48px;
-    z-index: 50; transform: translate(-50%, -50%);
-    pointer-events: none; transition: left 0.05s linear, top 0.05s linear;
+  #topBarMission{
+    background:#fff8ea; border:3px solid var(--brown); border-radius:14px; padding:8px 18px;
+    font-family:'Baloo 2',cursive; font-size:18px; color:var(--red); pointer-events:auto;
+    box-shadow:0 4px 8px rgba(0,0,0,.3); display:flex; align-items:center; gap:10px;
   }
-  #player img { width: 100%; height: 100%; object-fit: contain; }
+  .stat-pill{
+    background:rgba(255,255,255,.98); border-radius:24px; padding:6px 16px; border:3px solid var(--brown);
+    font-size:18px; font-weight:bold; box-shadow:0 4px 8px rgba(0,0,0,.3); pointer-events:auto;
+    display:flex; align-items:center; gap:8px;
+  }
 
-  /* JOYSTICK FLUTUANTE AREA */
+  /* FREEZE OVERLAY */
+  #freeze-overlay{
+    position:absolute; inset:0; background:rgba(120,200,255,.85); backdrop-filter:blur(2px);
+    display:none; flex-direction:column; align-items:center; justify-content:center; z-index:40; pointer-events:none;
+  }
+  #freeze-overlay .ftxt{
+    font-family:'Baloo 2',cursive; font-size:36px; color:#083652; text-shadow:0 2px 6px #fff;
+    background:rgba(255,255,255,.9); padding:12px 32px; border-radius:18px; border:4px solid #083652;
+  }
+
+  /* MODALS */
+  .modalOverlay{
+    position:fixed; inset:0; background:rgba(20,10,5,.85); z-index:100;
+    display:none; align-items:center; justify-content:center; padding:16px;
+    touch-action:auto;
+  }
+  .modalCard{
+    background:var(--cream); border:6px solid var(--brown); border-radius:20px;
+    box-shadow:0 16px 0 var(--brown-dark), 0 22px 34px rgba(0,0,0,.4);
+    max-width:620px; width:100%; max-height:92vh; overflow-y:auto; padding:22px;
+    touch-action:auto;
+  }
+  .promptBox{
+    background:var(--postit); border-radius:10px; padding:14px 16px; margin-bottom:14px;
+    font-size:18px; border:2px solid var(--yellow-dark); box-shadow:0 3px 6px rgba(0,0,0,.1);
+  }
+  .optionsGrid{display:flex; flex-direction:column; gap:10px;}
+  .optBtn{
+    background:#fff; border:3px solid var(--orange); border-radius:12px; padding:14px 16px;
+    font-size:18px; text-align:left; box-shadow:0 4px 0 var(--orange-dark); font-family:inherit; font-weight:bold;
+  }
+  .optBtn.correct{background:#d7f5df !important; border-color:var(--green) !important; box-shadow:0 4px 0 #2c8350 !important;}
+  .optBtn.wrong{background:#fbdada !important; border-color:var(--red) !important; box-shadow:0 4px 0 #a83224 !important;}
+  
+  .feedbackBox{
+    font-size:16px; font-weight:bold; padding:12px; border-radius:10px; margin-top:12px; text-align:center; display:none;
+  }
+  .feedbackBox.good{background:#d7f5df; color:#2c8350; border:2px solid #2c8350; display:block;}
+  .feedbackBox.bad{background:#fbdada; color:var(--red); border:2px solid var(--red); display:block;}
+
+  .wordPool, .sentenceStrip{display:flex; flex-wrap:wrap; gap:8px; min-height:48px; padding:8px; border-radius:10px;}
+  .wordPool{background:#f1e3c6; border:2px dashed var(--brown);}
+  .sentenceStrip{background:#fff; border:3px solid var(--orange); margin-bottom:10px;}
+  .wordChip{
+    background:var(--yellow); border:2px solid var(--yellow-dark); border-radius:8px; padding:8px 12px;
+    font-size:16px; font-weight:700; box-shadow:0 3px 0 var(--yellow-dark); cursor:pointer;
+  }
+  .wordChip.placed{background:#d7f5df; border-color:var(--green); box-shadow:0 3px 0 #2c8350;}
+
+  .memoryGrid{display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-bottom:10px;}
+  .memCard{
+    aspect-ratio:1; background:var(--orange); border-radius:10px; border:3px solid var(--orange-dark);
+    display:flex; align-items:center; justify-content:center; font-size:24px; color:#fff;
+    box-shadow:0 4px 0 var(--orange-dark); cursor:pointer; text-align:center; padding:4px; font-weight:bold;
+  }
+  .memCard.flipped{background:#fff; color:var(--navy); border-color:var(--brown);}
+  .memCard.matched{background:#d7f5df; color:var(--navy); border-color:var(--green); box-shadow:0 4px 0 #2c8350;}
+
+  .typeRow{display:flex; gap:10px; flex-wrap:wrap;}
+  .typeRow input[type=text]{
+    flex:1; min-width:160px; padding:12px; font-size:18px; border-radius:10px; border:3px solid var(--orange);
+    font-family:'Patrick Hand',cursive; touch-action:auto;
+  }
+
+  .stoveTimerBar{height:16px; border-radius:8px; background:#ddd; overflow:hidden; margin-bottom:10px; border:2px solid var(--brown-dark);}
+  .stoveTimerFill{height:100%; background:linear-gradient(90deg,var(--green),var(--yellow),var(--red)); width:100%; transition:width 1s linear;}
+
+  /* JOYSTICK FLUTUANTE */
   #joystick-zone {
-    position: fixed; left: 20px; bottom: 20px; width: 130px; height: 130px;
-    background: rgba(255,255,255,0.2); border: 3px solid rgba(255,255,255,0.4);
-    border-radius: 50%; z-index: 100; touch-action: none;
+    position: absolute; left: 24px; bottom: 20px; width: 120px; height: 120px;
+    background: rgba(255,255,255,0.25); border: 3px solid rgba(255,255,255,0.5);
+    border-radius: 50%; z-index: 30; touch-action: none;
     display: flex; align-items: center; justify-content: center;
   }
   #joystick-stick {
-    width: 50px; height: 50px; background: rgba(255,140,66,0.9);
+    width: 46px; height: 46px; background: var(--orange);
     border: 3px solid #fff; border-radius: 50%;
     position: absolute; pointer-events: none;
     box-shadow: 0 4px 10px rgba(0,0,0,0.3);
@@ -62,106 +192,875 @@
 </style>
 </head>
 <body>
+<div id="app">
 
-<div id="game-container">
-  <div id="grid-map">
-    <!-- Células do Grid de Exemplo -->
-    <div class="cell"><div class="counter"><img src="https://i.imgur.com/9dBpziU.png"></div></div>
-    <div class="cell"></div><div class="cell"></div><div class="cell"></div>
-    <div class="cell"></div><div class="cell"></div><div class="cell"></div>
-    <div class="cell"><div class="counter"><img src="https://i.imgur.com/FzL7piC.png"></div></div>
-    
-    <!-- Linhas do meio vazias para caminhar -->
-    <div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div>
-    <div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div>
-    
-    <div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div>
-    <div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div>
+  <!-- MENU SCREEN -->
+  <div id="screen-menu" class="screen active">
+    <div class="panel">
+      <h1>🍳 CRAZY KITCHEN</h1>
+      <div style="font-size:16px; color:var(--brown-dark); margin-bottom:14px;">OVERCOOKED EXAM REVISION ESCAPE</div>
 
-    <div class="cell"><div class="counter"><img src="https://i.imgur.com/3UZJWi0.gif"></div></div>
-    <div class="cell"></div><div class="cell"></div><div class="cell"></div>
-    <div class="cell"></div><div class="cell"></div><div class="cell"></div>
-    <div class="cell"><div class="counter"><img src="https://i.imgur.com/2FIVtfd.png"></div></div>
+      <div class="field">
+        <label for="input-name">👨‍🍳 Chef's Name:</label>
+        <input type="text" id="input-name" maxlength="16" placeholder="Type your name...">
+      </div>
 
-    <!-- AVATAR CAPIVARA -->
-    <div id="player">
-      <img src="https://i.imgur.com/lGMaZEs.png">
+      <div class="field">
+        <label>👕 Choose Your Animal Chef:</label>
+        <div class="grid-3" id="skin-selector"></div>
+      </div>
+
+      <div style="display:flex; justify-content:center; margin-top:20px;">
+        <button class="bigBtn" id="btn-start" disabled>Go to Kitchen ➔</button>
+      </div>
     </div>
   </div>
-</div>
 
-<!-- JOYSTICK FLUTUANTE -->
-<div id="joystick-zone">
-  <div id="joystick-stick"></div>
+  <!-- ENTRY INSTRUCTIONS MODAL WITH EMOJIS -->
+  <div class="modalOverlay" id="instrModal">
+    <div class="modalCard">
+      <div style="background:var(--postit); border-radius:12px; padding:20px; border:3px solid var(--yellow-dark);">
+        <h2 style="color:var(--red); margin-top:0; font-size:26px;">📜 INSTRUCTIONS:</h2>
+        <div style="font-size:17px; line-height:1.7; text-align:left; color:var(--navy);">
+          • 👨‍🍳 <b>COLLECT AT LEAST 22 CHEF HATS.</b><br>
+          • 📋 <b>READ THE MISSIONS CAREFULLY.</b><br>
+          • 🏃‍♂️ <b>GO TO THE STATIONS AND COMPLETE THE MISSIONS.</b><br>
+          • ❄️ <b>KITCHEN FREEZE:</b> WRONG ANSWERS FREEZE YOU FOR 5 SECONDS.<br>
+          • 🛡️ <b>IRON APRON SHIELD:</b> EARN APRONS TO SHIELD WRONG ANSWERS. BE CAREFUL! YOU CAN ONLY USE 3 APRONS THROUGH THE GAME!
+        </div>
+      </div>
+      <button class="bigBtn" id="btn-close-instructions" style="margin-top:20px;">GO TO MISSIONS ➔</button>
+    </div>
+  </div>
+
+  <!-- CHECKLIST MODAL -->
+  <div class="modalOverlay" id="checklistModal">
+    <div class="modalCard">
+      <div style="background:var(--postit); border-radius:12px; padding:18px; border:2px solid var(--yellow-dark);">
+        <h2 style="margin:0 0 10px; color:var(--red);">📋 Kitchen Mission Checklist</h2>
+        <div id="checkListItems" style="display:flex; flex-direction:column; gap:8px;"></div>
+      </div>
+      <button class="bigBtn" id="closeChecklistBtn" style="margin-top:16px;">START GAME ➔</button>
+    </div>
+  </div>
+
+  <!-- GAME SCREEN -->
+  <div id="screen-game" class="screen">
+    <div id="stage-scaler">
+      <div id="game-map">
+        <!-- COUNTERTOPS -->
+        <div class="countertop" style="left:80px; top:80px; width:220px; height:100px;"></div>
+        <div class="countertop" style="left:400px; top:70px; width:460px; height:100px;"></div>
+        <div class="countertop" style="left:160px; top:270px; width:180px; height:100px;"></div>
+        <div class="countertop" style="left:460px; top:260px; width:420px; height:100px;"></div>
+        <div class="countertop" style="left:100px; top:420px; width:780px; height:90px;"></div>
+
+        <div id="hud-bar">
+          <div id="topBarMission">
+            <span id="hudMissionText">📋 Check your missions</span>
+            <button id="openChecklistBtn" style="background:none; border:none; font-size:18px; cursor:pointer;">📋</button>
+          </div>
+          <div style="display:flex; gap:10px;">
+            <div class="stat-pill">👨‍🍳 <span id="hatCount">0</span>/<span id="hatMax">32</span></div>
+            <div class="stat-pill">🛡️ <span id="shieldCount">0</span>/3</div>
+          </div>
+        </div>
+
+        <div id="freeze-overlay">
+          <div class="ftxt">❄️ KITCHEN FREEZE ❄️</div>
+          <div id="freeze-timer" style="font-size:48px; font-weight:bold; color:#083652; margin-top:10px;">5</div>
+        </div>
+
+        <!-- JOYSTICK TOUCH CONTROL -->
+        <div id="joystick-zone">
+          <div id="joystick-stick"></div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- MISSION QUIZ MODAL -->
+  <div class="modalOverlay" id="quiz-modal">
+    <div class="modalCard" id="quiz-card"></div>
+  </div>
+
+  <!-- SHIELD PROMPT MODAL -->
+  <div class="modalOverlay" id="shieldPromptOverlay">
+    <div class="modalCard" style="text-align:center;">
+      <h2 style="color:var(--red);">❌ Wrong Answer!</h2>
+      <div id="shieldExplanationText" class="promptBox" style="text-align:left; font-size:16px; background:#fbdada; border-color:var(--red);"></div>
+      <p style="font-size:18px;">Use an <b>Iron Apron Shield 🛡️</b> to block the 5s freeze penalty?</p>
+      <div style="display:flex; gap:10px; justify-content:center; margin-top:16px;">
+        <button class="bigBtn" id="useShieldBtn">🛡️ Use Shield (<span id="promptShieldNum">1</span> left)</button>
+        <button class="bigBtn secondary" id="skipShieldBtn">❄️ Take Penalty (5s Freeze)</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- VICTORY / FAILURE SCREEN -->
+  <div class="modalOverlay" id="screen-victory">
+    <div class="modalCard" style="text-align:center;">
+      <h1 id="victoryHeader" style="color:var(--red); font-size:32px;">🏆 MASTER CHEF! 🏆</h1>
+      <div style="font-size:40px; margin:10px 0;" id="starsDisplay">⭐⭐⭐</div>
+      <div id="victoryTitle" style="font-size:20px; font-weight:700; margin-bottom:10px;">3-Star Master Chef!</div>
+      <p style="font-size:18px;">Hats collected: <b id="vHats">0/32</b> | Accuracy: <b id="vAcc">0%</b></p>
+      <button class="bigBtn" onclick="location.reload()" style="margin-top:16px;">🔁 Play Again</button>
+    </div>
+  </div>
+
 </div>
 
 <script>
-  const player = document.getElementById('player');
-  const map = document.getElementById('grid-map');
-  const zone = document.getElementById('joystick-zone');
-  const stick = document.getElementById('joystick-stick');
+/* DYNAMIC FULLSCREEN SCALER FOR MOBILE & DESKTOP */
+function fitGameToScreen(){
+  const scaler = document.getElementById("stage-scaler");
+  if(!scaler) return;
+  const targetW = 960, targetH = 540;
+  const windowW = window.innerWidth;
+  const windowH = window.innerHeight;
+  const scale = Math.min(windowW / targetW, windowH / targetH) * 0.98;
+  scaler.style.transform = `scale(${scale})`;
+}
+window.addEventListener("resize", fitGameToScreen);
+window.addEventListener("orientationchange", ()=> setTimeout(fitGameToScreen, 150));
 
-  let pos = { x: 200, y: 150 };
-  let moveDir = { x: 0, y: 0 };
-  let isTouching = false;
+/* AUDIO ENGINE */
+let audioCtx = null;
+function getCtx(){
+  if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  if(audioCtx.state === 'suspended') audioCtx.resume();
+  return audioCtx;
+}
 
-  // Atualiza Posição do Player
-  function updatePlayer(){
-    player.style.left = pos.x + 'px';
-    player.style.top = pos.y + 'px';
+let lastFootstep = 0;
+function playFootstepSound(){
+  const now = performance.now();
+  if(now - lastFootstep < 250) return;
+  lastFootstep = now;
+  tone(100 + Math.random() * 40, 0, 0.05, 'triangle', 0.08);
+}
+
+function tone(freq, start, dur, type, gainVal){
+  try {
+    const ctx = getCtx();
+    const osc = ctx.createOscillator();
+    const g = ctx.createGain();
+    osc.type = type || 'sine';
+    osc.frequency.setValueAtTime(freq, ctx.currentTime + start);
+    g.gain.setValueAtTime(0, ctx.currentTime + start);
+    g.gain.linearRampToValueAtTime(gainVal || 0.2, ctx.currentTime + start + 0.02);
+    g.gain.linearRampToValueAtTime(0, ctx.currentTime + start + dur);
+    osc.connect(g); g.connect(ctx.destination);
+    osc.start(ctx.currentTime + start);
+    osc.stop(ctx.currentTime + start + dur + 0.02);
+  } catch(e){}
+}
+
+const Sound = {
+  click(){ tone(600, 0, 0.04, 'sine', 0.1); },
+  coin(){ tone(880,0,0.09,'square',0.18); tone(1318,0.09,0.12,'square',0.18); },
+  error(){ tone(200,0,0.15,'sawtooth',0.22); tone(140,0.1,0.2,'sawtooth',0.22); },
+  freeze(){ tone(880,0,0.15,'triangle',0.15); tone(440,0.15,0.15,'triangle',0.15); },
+  shield(){ tone(1046.5,0,0.1,'square',0.15); tone(1318.5,0.08,0.14,'square',0.14); },
+  victory(){ [523.25,659.25,783.99,1046.5].forEach((f,i)=> tone(f, i*0.16, 0.3, 'triangle', 0.22)); }
+};
+
+document.addEventListener('click', (e)=>{
+  if(e.target.tagName==='BUTTON' || e.target.closest('button')) Sound.click();
+});
+
+const SKINS = [
+  { id:'capy', name:'CAPY CHEF', img:'https://i.imgur.com/lGMaZEs.png' },
+  { id:'cat', name:'CAT CHEF', img:'https://i.imgur.com/9k6Ajn7.png' },
+  { id:'penguin', name:'PENGUIN CHEF', img:'https://i.imgur.com/t9PCDhe.png' }
+];
+
+function renderPlayerHtml(skinId, nameText){
+  const s = SKINS.find(x=>x.id===skinId) || SKINS[0];
+  return `
+    <div style="position:relative; width:68px; height:68px; display:flex; flex-direction:column; align-items:center;">
+      <img src="${s.img}" style="width:62px; height:62px; object-fit:contain; filter:drop-shadow(0 4px 4px rgba(0,0,0,0.4));">
+      <div class="pname">${nameText}</div>
+    </div>
+  `;
+}
+
+const STATIONS = [
+  {id:'sink', name:"Sink", img:"https://i.imgur.com/9dBpziU.png", pos:[140, 120], mission:"Mission 1: Wash your hands at the sink"},
+  {id:'recipe', name:"Recipe Book", img:"https://i.imgur.com/FzL7piC.png", pos:[780, 130], mission:"Mission 2: Read the recipe book"},
+  {id:'fridge', name:"Fridge & Pantry", img:"https://i.imgur.com/GdE5qN5.png", pos:[460, 110], mission:"Mission 3: Organize items in fridge and pantry"},
+  {id:'drawers', name:"Utensil Drawers", img:"https://i.imgur.com/BhNPpsA.png", pos:[220, 310], mission:"Mission 4: Collect utensils from drawers"},
+  {id:'board', name:"Cutting Board", img:"https://i.imgur.com/YGwt2Ji.png", pos:[820, 320], mission:"Mission 5: Cut ingredients on the board"},
+  {id:'pan', name:"Frying Pan", img:"https://i.imgur.com/aLe8IjP.png", pos:[520, 300], mission:"Mission 6: Fry ingredients in the pan"},
+  {id:'stove', name:"Stove", img:"https://i.imgur.com/3UZJWi0.gif", pos:[160, 460], mission:"Mission 7: Cook the recipe on the stove!"},
+  {id:'table', name:"Dining Table", img:"https://i.imgur.com/R28vUa0.png", pos:[500, 460], mission:"Mission 8: Set the dining table"},
+  {id:'chef', name:"Head Chef Counter", img:"https://i.imgur.com/2FIVtfd.png", pos:[820, 470], mission:"Mission 9: Serve the Head Chef"}
+];
+
+function shuffle(arr){ return [...arr].sort(()=>Math.random()-0.5); }
+
+function mc(prompt, options, correctIndex, explanation){ 
+  const correctText = options[correctIndex];
+  const shuffled = shuffle(options);
+  return {type:"mc", prompt, options: shuffled, correct: shuffled.indexOf(correctText), explanation}; 
+}
+function typing(prompt, accepted, explanation){ return {type:"typing", prompt, accepted:accepted.map(a=>a.toLowerCase()), explanation}; }
+function order(prompt, words, correctSentence, explanation){ return {type:"order", prompt, words, correct:correctSentence.toLowerCase(), explanation}; }
+
+/* EXAM QUESTIONS */
+const MISSIONS = [
+/* 1 Sink */ {
+  intro:"Wash your hands! Complete permission rules with Can / Can't.",
+  items:[
+    mc("Select the grammatically CORRECT sentence:", ["We can't use cell phones in class.", "We can't to use cell phones in class.", "We can't using cell phones in class."], 0, "After 'can' or 'can't', use the base verb without 'to' or '-ing'."),
+    mc("A: Can I go to the skatepark with Leticia?\nB: _____________", ["Yes, you can.", "Yes, can.", "Yes, you can't."], 0, "Short answer for 'Can I...?' is 'Yes, you can.'"),
+    mc("Complete: Sandro, you ________ chocolate before dinner!", ["can't eat", "can't eats", "don't can eat"], 0, "Use 'can't' + base verb ('eat'). Do not add '-s'."),
+    mc("A: Can you play volleyball tonight?\nB: _____________", ["No, I can't.", "No, I can't play volleyball tonight with you.", "No, not can."], 0, "Short negative answer is 'No, I can't.'")
+  ]
+},
+/* 2 Recipe Book */ {
+  intro:"Read carefully and choose the correct Subject or Object pronoun.",
+  items:[
+    mc("Mix the beans and rice first. Then, you need to cook _____.", ["them", "they", "their"], 0, "Use Object Pronoun 'them' after verbs like 'cook'."),
+    mc("My uncle doesn't eat fruit — _____ only eats junk food.", ["he", "him", "his"], 0, "Use Subject Pronoun 'he' before verbs like 'eats'."),
+    mc("My mom teaches my brother and me how to cook. She teaches _____ every weekend.", ["us", "we", "our"], 0, "'My brother and me' after a verb becomes 'us'."),
+    mc("Your sister is really nice! I like hanging out with _____.", ["her", "she", "hers"], 0, "Use Object Pronoun 'her' after prepositions like 'with'.")
+  ]
+},
+/* 3 Fridge & Pantry */ {
+  intro:"Match food words to pictures (30s timer) and classify ingredients.",
+  memory:{pairs:[
+    {emoji:"🥕",word:"carrot"}, {emoji:"🧀",word:"cheese"},
+    {emoji:"🍍",word:"pineapple"}, {emoji:"🍚",word:"rice"},
+    {emoji:"🫘",word:"beans"}, {emoji:"🐟",word:"fish"}
+  ]},
+  items:[
+    mc("Beans are a very healthy carbohydrate. Where do we store dry beans?", ["Pantry", "Fridge", "Oven"], 0, "Dry grains like beans and rice stay in the Pantry."),
+    mc("Queijo Minas is a famous Brazilian _____. We keep it cold in the fridge.", ["cheese", "rice", "chicken"], 0, "Cheese is kept cold in the fridge.")
+  ]
+},
+/* 4 Utensil Drawers */ {
+  intro:"Read utensil descriptions and choose the correct utensil.",
+  items:[
+    mc("She is holding a _____ and a fork to eat her steak.", ["knife", "pot", "spoon"], 0, "A knife is used with a fork to cut steak."),
+    mc("Add the chorizo and paprika to the _____ to cook for 5 minutes.", ["pot", "plate", "fork"], 0, "Ingredients are cooked inside a pot."),
+    mc("She is mixing the eggs in a bowl with a _____.", ["spoon", "knife", "pan"], 0, "Use a spoon or whisk to mix eggs in a bowl.")
+  ]
+},
+/* 5 Cutting Board */ {
+  intro:"Reorder words to form complex recipe instructions.",
+  orderItems:[
+    order("Put words in order:", ["Why", "don't", "we", "boil", "the", "spaghetti"], "why don't we boil the spaghetti", "Suggestion structure: Why don't we + base verb?"),
+    order("Put words in order:", ["How", "about", "making", "a", "sauce", "first"], "how about making a sauce first", "Suggestion structure: How about + verb-ing?"),
+    order("Put words in order:", ["You", "can't", "eat", "junk", "food", "today"], "you can't eat junk food today", "Permission rule: Subject + can't + base verb.")
+  ]
+},
+/* 6 Frying Pan */ {
+  intro:"Type short answers carefully.",
+  typingItems:[
+    typing("Complete action: She is _____ the onions in the oil.", ["frying"], "Continuous action: 'She is + verb-ing' ('frying')."),
+    typing("Dario and I are making a cake. Can you help _____?", ["us"], "'Dario and I' after a verb becomes 'us'."),
+    typing("Mr. Cole is my teacher. I like _____ very much.", ["him"], "'Mr. Cole' (he) as an object pronoun is 'him'.")
+  ]
+},
+/* 7 Stove */ {
+  intro:"The stove is on fire! 10s TIMER PER QUESTION! Respond with correct Suggestion grammar!",
+  time:10, needCorrect:3,
+  items:[
+    mc("Edu: \"What about _____ the spaghetti marinara?\"", ["making", "make", "to make"], 0, "After 'What about', always use verb-ing ('making')."),
+    mc("Alicia: \"Why don't we _____ the onions in the oil?\"", ["fry", "frying", "to fry"], 0, "After 'Why don't we', use base verb ('fry')."),
+    mc("Edu: \"I'm hungry! Let's _____ dinner together.\"", ["cook", "cooking", "to cook"], 0, "After 'Let's', use base verb ('cook').")
+  ]
+},
+/* 8 Dining Table */ {
+  intro:"Fix menu errors and complete double-pronoun contexts.",
+  items:[
+    mc("Identify the CORRECT sentence:", ["My father is writing an email to my uncle. We visit him soon.", "My father is writing an email to my uncle. We visit her soon.", "My father writing an email to my uncle. We visit they soon."], 0, "'Uncle' (male) uses object pronoun 'him'."),
+    mc("Which response is correct? \"Can we get takeaway pizza tonight?\"", ["Yes, that's a good idea! Where's the menu?", "Yes, you can't.", "No, you can play."], 0, "A logical positive response to a food suggestion.")
+  ]
+},
+/* 9 Head Chef Counter */ {
+  intro:"Final Boss Challenge: Match Head Chef suggestions & permission rules!",
+  items:[
+    mc("Head Chef: \"How about adding salt to the salad?\"\nChef Helper: \"__________________\"", ["Great idea! Let's add it now.", "Great idea! Let's adding it now.", "I can't salad."], 0, "'Let's' takes base verb 'add', and 'salt' becomes 'it'."),
+    mc("Head Chef: \"Can I play video games before I eat dinner?\"\nMom: \"__________________\"", ["No, you can't. Eat your dinner first!", "Yes, you can't.", "No, you don't can."], 0, "Negative permission answer: 'No, you can't.'")
+  ]
+}
+];
+
+const HAT_MAX = 32;
+
+let gameState = {
+  playerName: '',
+  selectedSkin: 'capy',
+  score: 0,
+  currentMission: 0,
+  completed: {},
+  hats: 0,
+  attempts: 0,
+  correctAnswers: 0,
+  shields: 0,
+  totalShieldsEarned: 0,
+  streak: 0,
+  frozen: false,
+  frozenUntil: 0,
+  pos: {x: 480, y: 270},
+  targetPos: null,
+  modalOpen: false,
+  pendingPenalty: false
+};
+
+const keys = {};
+let gameLoopReq = null;
+
+function renderMenu(){
+  const selector = document.getElementById('skin-selector');
+  selector.innerHTML = '';
+  SKINS.forEach(s => {
+    const card = document.createElement('div');
+    card.className = `skin-card ${gameState.selectedSkin===s.id ? 'selected' : ''}`;
+    card.innerHTML = `
+      <img src="${s.img}">
+      <span style="font-size:11px; font-weight:bold;">${s.name}</span>
+    `;
+    card.onclick = () => { gameState.selectedSkin = s.id; renderMenu(); };
+    selector.appendChild(card);
+  });
+}
+
+document.getElementById('input-name').oninput = (e) => {
+  gameState.playerName = e.target.value.trim();
+  document.getElementById('btn-start').disabled = !gameState.playerName;
+};
+
+document.getElementById('btn-start').onclick = () => {
+  getCtx();
+  startGame();
+};
+
+/* STEP 1 TO STEP 2 BUTTON FLOW */
+document.getElementById('btn-close-instructions').onclick = () => {
+  document.getElementById('instrModal').style.display='none';
+  showChecklistModal();
+};
+
+/* STEP 2 TO GAME START BUTTON FLOW */
+document.getElementById('closeChecklistBtn').onclick = () => {
+  document.getElementById('checklistModal').style.display='none';
+  updateHUD(); // Now Mission 1 appears in top corner!
+};
+
+function startGame(){
+  gameState.score = 0;
+  gameState.currentMission = 0;
+  gameState.completed = {};
+  gameState.hats = 0;
+  gameState.attempts = 0;
+  gameState.correctAnswers = 0;
+  gameState.shields = 0;
+  gameState.totalShieldsEarned = 0;
+  gameState.streak = 0;
+  gameState.frozen = false;
+  gameState.pos = {x: 480, y: 270};
+  gameState.targetPos = null;
+
+  document.getElementById('screen-menu').classList.remove('active');
+  document.getElementById('screen-game').classList.add('active');
+
+  fitGameToScreen();
+  initMap();
+  
+  /* ENTRY INSTRUCTIONS MODAL */
+  document.getElementById('instrModal').style.display = 'flex';
+
+  window.addEventListener('keydown', onKeyDown);
+  window.addEventListener('keyup', onKeyUp);
+
+  if(gameLoopReq) cancelAnimationFrame(gameLoopReq);
+  gameLoopReq = requestAnimationFrame(gameLoop);
+}
+
+function onKeyDown(e){
+  const k = e.key.toLowerCase();
+  if(['arrowup','arrowdown','arrowleft','arrowright','w','a','s','d'].includes(k)){
+    keys[k] = true; gameState.targetPos = null;
   }
-  updatePlayer();
+}
+function onKeyUp(e){ keys[e.key.toLowerCase()] = false; }
 
-  // Lógica do Joystick
-  const maxRadius = 40;
-  const zoneRect = zone.getBoundingClientRect();
-  const centerX = zoneRect.left + zoneRect.width / 2;
-  const centerY = zoneRect.top + zoneRect.height / 2;
+/* JOYSTICK ENGINE */
+let joystickDir = { x: 0, y: 0 };
+let isTouchingJoystick = false;
 
-  zone.addEventListener('pointerdown', handlePointer);
-  zone.addEventListener('pointermove', handlePointer);
-  window.addEventListener('pointerup', resetJoystick);
+const zone = document.getElementById('joystick-zone');
+const stick = document.getElementById('joystick-stick');
+const maxRadius = 38;
 
-  function handlePointer(e){
-    if(e.type === 'pointerdown') isTouching = true;
-    if(!isTouching) return;
+zone.addEventListener('pointerdown', (e) => { isTouchingJoystick = true; handleJoystick(e); });
+window.addEventListener('pointermove', (e) => { if(isTouchingJoystick) handleJoystick(e); });
+window.addEventListener('pointerup', () => {
+  isTouchingJoystick = false;
+  stick.style.transform = 'translate(0px, 0px)';
+  joystickDir = { x: 0, y: 0 };
+});
 
-    const dx = e.clientX - centerX;
-    const dy = e.clientY - centerY;
-    const dist = Math.hypot(dx, dy);
-    const angle = Math.atan2(dy, dx);
+function handleJoystick(e){
+  const rect = zone.getBoundingClientRect();
+  const centerX = rect.left + rect.width / 2;
+  const centerY = rect.top + rect.height / 2;
 
-    const clampDist = Math.min(dist, maxRadius);
-    const stickX = Math.cos(angle) * clampDist;
-    const stickY = Math.sin(angle) * clampDist;
+  const dx = e.clientX - centerX;
+  const dy = e.clientY - centerY;
+  const dist = Math.hypot(dx, dy);
+  const angle = Math.atan2(dy, dx);
 
-    stick.style.transform = `translate(${stickX}px, ${stickY}px)`;
+  const clampDist = Math.min(dist, maxRadius);
+  const stickX = Math.cos(angle) * clampDist;
+  const stickY = Math.sin(angle) * clampDist;
 
-    // Normaliza velocidade (-1 a 1)
-    moveDir.x = Math.cos(angle) * (clampDist / maxRadius);
-    moveDir.y = Math.sin(angle) * (clampDist / maxRadius);
-  }
+  stick.style.transform = `translate(${stickX}px, ${stickY}px)`;
+  joystickDir = {
+    x: Math.cos(angle) * (clampDist / maxRadius),
+    y: Math.sin(angle) * (clampDist / maxRadius)
+  };
+  gameState.targetPos = null;
+}
 
-  function resetJoystick(){
-    isTouching = false;
-    stick.style.transform = 'translate(0px, 0px)';
-    moveDir = { x: 0, y: 0 };
-  }
+/* TAP DIRECTLY ON MAP TO MOVE */
+document.getElementById('game-map').addEventListener('pointerdown', (e)=>{
+  if(e.target.closest('#joystick-zone') || gameState.modalOpen || gameState.frozen) return;
+  const rect = e.currentTarget.getBoundingClientRect();
+  const scale = 960 / rect.width;
+  const clickX = (e.clientX - rect.left) * scale;
+  const clickY = (e.clientY - rect.top) * scale;
+  gameState.targetPos = {x: Math.min(Math.max(clickX, 30), 930), y: Math.min(Math.max(clickY, 40), 500)};
+});
 
-  // Loop de Movimento Fluido
-  function gameLoop(){
-    if(moveDir.x !== 0 || moveDir.y !== 0){
-      const speed = 4;
-      const mapRect = map.getBoundingClientRect();
-      
-      pos.x = Math.min(Math.max(pos.x + moveDir.x * speed, 30), mapRect.width - 30);
-      pos.y = Math.min(Math.max(pos.y + moveDir.y * speed, 30), mapRect.height - 30);
-      
-      updatePlayer();
+function initMap(){
+  const map = document.getElementById('game-map');
+  map.querySelectorAll('.station-node, .player-node').forEach(el=>el.remove());
+
+  STATIONS.forEach((st, i) => {
+    const sDiv = document.createElement('div');
+    sDiv.className = 'station-node';
+    sDiv.id = `station-${st.id}`;
+    sDiv.style.left = `${st.pos[0] - 45}px`;
+    sDiv.style.top = `${st.pos[1] - 45}px`;
+    sDiv.innerHTML = `<img src="${st.img}" alt="${st.name}">`;
+    map.appendChild(sDiv);
+  });
+
+  const pDiv = document.createElement('div');
+  pDiv.className = 'player-node';
+  pDiv.id = 'player-node';
+  map.appendChild(pDiv);
+  updatePlayerSprite();
+}
+
+function updatePlayerSprite(){
+  const pDiv = document.getElementById('player-node');
+  if(!pDiv) return;
+  pDiv.style.left = `${gameState.pos.x}px`;
+  pDiv.style.top = `${gameState.pos.y}px`;
+  pDiv.innerHTML = renderPlayerHtml(gameState.selectedSkin, gameState.playerName);
+}
+
+function updateHUD(){
+  const idx = gameState.currentMission;
+  if(idx < STATIONS.length) document.getElementById('hudMissionText').textContent = STATIONS[idx].mission;
+  else document.getElementById('hudMissionText').textContent = "All Missions Done! 🎉";
+
+  document.getElementById('hatCount').textContent = gameState.hats;
+  document.getElementById('hatMax').textContent = HAT_MAX;
+  document.getElementById('shieldCount').textContent = gameState.shields;
+}
+
+function triggerFreeze(seconds){
+  gameState.frozen = true;
+  gameState.targetPos = null;
+  gameState.frozenUntil = Date.now() + seconds * 1000;
+  Sound.freeze();
+  document.getElementById('freeze-overlay').style.display = 'flex';
+  
+  const iv = setInterval(() => {
+    const left = Math.max(0, Math.ceil((gameState.frozenUntil - Date.now())/1000));
+    document.getElementById('freeze-timer').innerText = left;
+    if(left <= 0){
+      gameState.frozen = false;
+      document.getElementById('freeze-overlay').style.display = 'none';
+      clearInterval(iv);
     }
-    requestAnimationFrame(gameLoop);
+  }, 200);
+}
+
+function gameLoop(){
+  if(!gameState.frozen && !gameState.modalOpen){
+    let dx = 0, dy = 0;
+    const speed = 5.0;
+
+    if(keys['w']||keys['arrowup']) dy -= speed;
+    if(keys['s']||keys['arrowdown']) dy += speed;
+    if(keys['a']||keys['arrowleft']) dx -= speed;
+    if(keys['d']||keys['arrowright']) dx += speed;
+
+    if(dx === 0 && dy === 0 && (joystickDir.x !== 0 || joystickDir.y !== 0)){
+      dx = joystickDir.x * speed;
+      dy = joystickDir.y * speed;
+    }
+
+    if(dx === 0 && dy === 0 && gameState.targetPos){
+      const dist = Math.hypot(gameState.targetPos.x - gameState.pos.x, gameState.targetPos.y - gameState.pos.y);
+      if(dist > speed){
+        dx = ((gameState.targetPos.x - gameState.pos.x) / dist) * speed;
+        dy = ((gameState.targetPos.y - gameState.pos.y) / dist) * speed;
+      } else {
+        gameState.pos.x = gameState.targetPos.x;
+        gameState.pos.y = gameState.targetPos.y;
+        gameState.targetPos = null;
+      }
+    }
+
+    if(dx!==0 || dy!==0){
+      playFootstepSound();
+      gameState.pos.x = Math.min(Math.max(gameState.pos.x + dx, 30), 930);
+      gameState.pos.y = Math.min(Math.max(gameState.pos.y + dy, 40), 500);
+      updatePlayerSprite();
+
+      STATIONS.forEach((st, i) => {
+        const dist = Math.hypot(gameState.pos.x - st.pos[0], gameState.pos.y - st.pos[1]);
+        if(dist < 42){
+          gameState.targetPos = null;
+          joystickDir = {x:0, y:0};
+          if(i === gameState.currentMission){
+            openMission(i);
+          } else if(i > gameState.currentMission){
+            triggerFreeze(5);
+            gameState.pos.x += (gameState.pos.x < st.pos[0] ? -35 : 35);
+            updatePlayerSprite();
+          }
+        }
+      });
+    }
   }
-  gameLoop();
+
+  gameLoopReq = requestAnimationFrame(gameLoop);
+}
+
+function showChecklistModal(){
+  const container = document.getElementById("checkListItems");
+  container.innerHTML = "";
+  STATIONS.forEach((st, i)=>{
+    const div = document.createElement("div");
+    const isDone = i < gameState.currentMission;
+    const isNow = i === gameState.currentMission;
+    div.style.cssText = `display:flex; align-items:center; gap:10px; padding:6px 10px; border-radius:8px; background:${isDone ? '#d7f5df' : isNow ? '#fff3d1' : 'rgba(255,255,255,.5)'}; ${isDone ? 'text-decoration:line-through; color:#2c8350;' : ''} ${isNow ? 'font-weight:bold; border:2px solid var(--orange);' : ''}`;
+    div.innerHTML = `<img src="${st.img}" style="width:24px; height:24px; object-fit:contain;"> <span>${st.mission}</span> ${isDone ? "✅" : isNow ? "👉" : "🔒"}`;
+    container.appendChild(div);
+  });
+  document.getElementById("checklistModal").style.display="flex";
+}
+document.getElementById("openChecklistBtn").onclick=showChecklistModal;
+
+function grantCorrect(){
+  gameState.hats++; gameState.attempts++; gameState.correctAnswers++; gameState.streak++;
+  Sound.coin();
+  if(gameState.streak >= 2 && gameState.totalShieldsEarned < 3 && gameState.shields < 3){
+    gameState.streak = 0; 
+    gameState.shields++;
+    gameState.totalShieldsEarned++;
+    Sound.shield();
+  }
+  updateHUD();
+}
+
+function handleWrongAnswer(explanationText, callbackOnContinue){
+  gameState.attempts++; gameState.streak = 0;
+  Sound.error();
+
+  if(gameState.shields > 0){
+    document.getElementById("promptShieldNum").textContent = gameState.shields;
+    document.getElementById("shieldExplanationText").innerHTML = `<b>Correct Explanation:</b><br>${explanationText || "Pay close attention to grammar rules!"}`;
+    document.getElementById("shieldPromptOverlay").style.display = "flex";
+
+    document.getElementById("useShieldBtn").onclick = ()=>{
+      gameState.shields--; Sound.shield();
+      document.getElementById("shieldPromptOverlay").style.display = "none";
+      updateHUD(); callbackOnContinue();
+    };
+    document.getElementById("skipShieldBtn").onclick = ()=>{
+      document.getElementById("shieldPromptOverlay").style.display = "none";
+      gameState.pendingPenalty = true;
+      updateHUD(); callbackOnContinue();
+    };
+  } else {
+    gameState.pendingPenalty = true;
+    updateHUD(); callbackOnContinue();
+  }
+}
+
+function openMission(index){
+  gameState.modalOpen = true;
+  gameState.pendingPenalty = false;
+  gameState.targetPos = null;
+  document.getElementById("quiz-modal").style.display = "flex";
+  const st = STATIONS[index]; const mdef = MISSIONS[index];
+  const queue = buildQueue(mdef);
+  runMissionFlow(index, st, mdef, queue, 0);
+}
+
+function buildQueue(mdef){
+  const q=[];
+  if(mdef.memory) q.push({kind:"memory", data:mdef.memory});
+  if(mdef.items) mdef.items.forEach(it=>q.push({kind: (mdef.time?"stove":"mc"), data:it}));
+  if(mdef.orderItems) mdef.orderItems.forEach(it=>q.push({kind:"order", data:it}));
+  if(mdef.typingItems) mdef.typingItems.forEach(it=>q.push({kind:"typing", data:it}));
+  return q;
+}
+
+function runMissionFlow(index, st, mdef, queue, step){
+  if(step>=queue.length){ finishMission(index, st); return; }
+  renderStep(index, st, mdef, queue, step);
+}
+
+function renderStep(index, st, mdef, queue, step){
+  const entry = queue[step];
+  const card = document.getElementById("quiz-card");
+  let html = `<h2 style="margin:0 0 4px; color:var(--red);">${st.mission}</h2><div style="font-size:14px; margin-bottom:12px;">${mdef.intro}</div>`;
+  card.innerHTML = html;
+
+  const advance = ()=> {
+    if(gameState.pendingPenalty){
+      gameState.pendingPenalty = false;
+      document.getElementById("quiz-modal").style.display = "none";
+      gameState.modalOpen = false;
+      triggerFreeze(5);
+    } else {
+      runMissionFlow(index, st, mdef, queue, step+1);
+    }
+  };
+
+  if(entry.kind==="mc" || entry.kind==="stove") renderMC(entry.data, advance, mdef.time, index, st);
+  else if(entry.kind==="typing") renderTyping(entry.data, advance);
+  else if(entry.kind==="order") renderOrder(entry.data, advance);
+  else if(entry.kind==="memory") renderMemory(entry.data, advance, index, st);
+}
+
+function renderMC(item, onDone, isStove, missionIdx, st){
+  const card = document.getElementById("quiz-card");
+  const box = document.createElement("div");
+  let timerHTML = isStove ? '<div class="stoveTimerBar"><div class="stoveTimerFill" id="stoveFill"></div></div>' : '';
+  box.innerHTML = timerHTML + `<div class="promptBox">${item.prompt.replace(/\n/g, '<br>')}</div><div class="optionsGrid" id="optWrap"></div><div id="fbBox" class="feedbackBox"></div><div style="text-align:center; margin-top:14px;"><button class="bigBtn" id="nextQuestionBtn" style="display:none;">Next Question ➔</button></div>`;
+  card.appendChild(box);
+
+  const wrap = box.querySelector("#optWrap");
+  const fbBox = box.querySelector("#fbBox");
+  const nextBtn = box.querySelector("#nextQuestionBtn");
+  let timeLeft = 10; let interval = null;
+
+  if(isStove){
+    interval = setInterval(()=>{
+      timeLeft--;
+      const fill = document.getElementById("stoveFill");
+      if(fill) fill.style.width = (timeLeft/10*100) + "%";
+      if(timeLeft <= 0){
+        clearInterval(interval);
+        Sound.error();
+        box.innerHTML = '<h3 style="color:var(--red); text-align:center;">⏳ Stove on Fire! Time\'s up!</h3><div style="text-align:center;"><button class="bigBtn" id="retryStoveBtn">🔁 Retry Stove Mission</button></div>';
+        document.getElementById("retryStoveBtn").onclick = ()=> openMission(missionIdx);
+      }
+    }, 1000);
+  }
+
+  item.options.forEach((opt, i)=>{
+    const b = document.createElement("button"); b.className = "optBtn"; b.textContent = opt;
+    b.addEventListener("click", ()=>{
+      if(interval) clearInterval(interval);
+      wrap.querySelectorAll(".optBtn").forEach(x=>x.disabled=true);
+
+      if(i === item.correct){
+        b.classList.add("correct");
+        fbBox.className = "feedbackBox good";
+        fbBox.innerHTML = "✅ Correct!";
+        grantCorrect();
+        nextBtn.style.display = "inline-block";
+        nextBtn.onclick = onDone;
+      } else {
+        b.classList.add("wrong");
+        wrap.children[item.correct].classList.add("correct");
+        fbBox.className = "feedbackBox bad";
+        fbBox.innerHTML = `❌ Incorrect! ${item.explanation}`;
+        nextBtn.style.display = "inline-block";
+        nextBtn.onclick = ()=>{
+          handleWrongAnswer(item.explanation, onDone);
+        };
+      }
+    });
+    wrap.appendChild(b);
+  });
+}
+
+function renderTyping(item, onDone){
+  const card = document.getElementById("quiz-card");
+  const box = document.createElement("div");
+  box.innerHTML = `<div class="promptBox">${item.prompt}</div><div class="typeRow"><input type="text" id="tIn" placeholder="Type answer..."><button class="bigBtn" id="tSub">Check</button></div><div id="fbBox" class="feedbackBox"></div><div style="text-align:center; margin-top:14px;"><button class="bigBtn" id="nextQuestionBtn" style="display:none;">Next Question ➔</button></div>`;
+  card.appendChild(box);
+  const input = box.querySelector("#tIn"); const btn = box.querySelector("#tSub"); const fbBox = box.querySelector("#fbBox"); const nextBtn = box.querySelector("#nextQuestionBtn");
+
+  function sub(){
+    const v = input.value.trim().toLowerCase(); if(!v) return;
+    btn.disabled = true; input.disabled = true;
+    nextBtn.style.display = "inline-block";
+
+    if(item.accepted.includes(v)){
+      fbBox.className = "feedbackBox good"; fbBox.innerHTML = "✅ Correct!";
+      grantCorrect(); nextBtn.onclick = onDone;
+    } else {
+      fbBox.className = "feedbackBox bad"; fbBox.innerHTML = `❌ Incorrect! Correct answer: "${item.accepted[0]}". ${item.explanation}`;
+      nextBtn.onclick = ()=>{ handleWrongAnswer(item.explanation, onDone); };
+    }
+  }
+  btn.onclick = sub; input.onkeydown = e => { if(e.key==="Enter") sub(); };
+}
+
+function renderOrder(item, onDone){
+  const card = document.getElementById("quiz-card");
+  const box = document.createElement("div");
+  box.innerHTML = `<div class="promptBox">${item.prompt}</div><div class="sentenceStrip" id="strip"></div><div class="wordPool" id="pool"></div><div style="display:flex; gap:10px; justify-content:center; margin-top:10px;"><button class="bigBtn secondary" id="rBtn">Reset</button><button class="bigBtn" id="cBtn">Check</button></div><div id="fbBox" class="feedbackBox"></div><div style="text-align:center; margin-top:14px;"><button class="bigBtn" id="nextQuestionBtn" style="display:none;">Next Question ➔</button></div>`;
+  card.appendChild(box);
+  const pool = box.querySelector("#pool"); const strip = box.querySelector("#strip"); const fbBox = box.querySelector("#fbBox"); const nextBtn = box.querySelector("#nextQuestionBtn");
+  let words = shuffle(item.words); let placed = [];
+
+  function render(){
+    pool.innerHTML = ""; strip.innerHTML = "";
+    words.forEach((w, i)=>{
+      const c = document.createElement("span"); c.className = "wordChip"; c.textContent = w;
+      c.onclick = ()=>{ placed.push(w); words.splice(i,1); render(); };
+      pool.appendChild(c);
+    });
+    placed.forEach((w, i)=>{
+      const c = document.createElement("span"); c.className = "wordChip placed"; c.textContent = w;
+      c.onclick = ()=>{ placed.splice(i,1); words.push(w); render(); };
+      strip.appendChild(c);
+    });
+  }
+  box.querySelector("#rBtn").onclick = ()=>{ words = shuffle(item.words); placed = []; render(); };
+  box.querySelector("#cBtn").onclick = ()=>{
+    const built = placed.join(" ").toLowerCase();
+    box.querySelector("#cBtn").disabled = true;
+    nextBtn.style.display = "inline-block";
+
+    if(built === item.correct){
+      fbBox.className = "feedbackBox good"; fbBox.innerHTML = "✅ Correct Sentence!";
+      grantCorrect(); nextBtn.onclick = onDone;
+    } else {
+      fbBox.className = "feedbackBox bad"; fbBox.innerHTML = `❌ Incorrect! "${item.correct}". ${item.explanation}`;
+      nextBtn.onclick = ()=>{ handleWrongAnswer(item.explanation, onDone); };
+    }
+  };
+  render();
+}
+
+function renderMemory(memory, onDone, missionIdx, st){
+  const card = document.getElementById("quiz-card");
+  const box = document.createElement("div");
+  box.innerHTML = '<div class="stoveTimerBar"><div class="stoveTimerFill" id="memFill"></div></div><div class="promptBox">Flip and match food words to emoji before 30s!</div><div class="memoryGrid" id="mGrid"></div>';
+  card.appendChild(box);
+  const grid = box.querySelector("#mGrid");
+  let cards = [];
+  memory.pairs.forEach((p, i)=>{
+    cards.push({pairId:i, label:p.emoji, matched:false});
+    cards.push({pairId:i, label:p.word, matched:false});
+  });
+  cards = shuffle(cards);
+  let flipped = []; let matchedCount = 0; let lock = false;
+  let timeLeft = 30;
+
+  let interval = setInterval(()=>{
+    timeLeft--;
+    const fill = document.getElementById("memFill");
+    if(fill) fill.style.width = (timeLeft/30*100) + "%";
+    if(timeLeft <= 0){
+      clearInterval(interval);
+      Sound.error();
+      box.innerHTML = '<h3 style="color:var(--red); text-align:center;">⏳ Time\'s up! Try again.</h3><div style="text-align:center;"><button class="bigBtn" id="retryMemBtn">🔁 Retry Memory</button></div>';
+      document.getElementById("retryMemBtn").onclick = ()=> openMission(missionIdx);
+    }
+  }, 1000);
+
+  function render(){
+    grid.innerHTML = "";
+    cards.forEach((c, i)=>{
+      const d = document.createElement("div");
+      d.className = "memCard" + (c.matched ? " matched" : (flipped.includes(i) ? " flipped" : ""));
+      d.textContent = c.matched || flipped.includes(i) ? c.label : "❓";
+      d.onclick = ()=>{
+        if(lock || c.matched || flipped.includes(i)) return;
+        flipped.push(i); render();
+        if(flipped.length === 2){
+          lock = true; const [a,b] = flipped;
+          if(cards[a].pairId === cards[b].pairId){
+            cards[a].matched = true; cards[b].matched = true; matchedCount++;
+            Sound.coin(); flipped = []; lock = false; render();
+            if(matchedCount === memory.pairs.length){
+              clearInterval(interval);
+              setTimeout(onDone, 800);
+            }
+          } else {
+            setTimeout(()=>{ flipped = []; lock = false; render(); }, 600);
+          }
+        }
+      };
+      grid.appendChild(d);
+    });
+  }
+  render();
+}
+
+function finishMission(index, st){
+  gameState.completed[index] = true;
+  document.getElementById(`station-${st.id}`).classList.add('done');
+  gameState.currentMission = index + 1;
+  updateHUD();
+
+  const card = document.getElementById("quiz-card");
+  const neededHats = Math.max(0, 22 - gameState.hats);
+
+  card.innerHTML = `
+    <h2 style="color:var(--red); text-align:center; font-size:28px;">🎉 Station Complete!</h2>
+    <div class="promptBox" style="text-align:center; font-size:20px; line-height:1.6;">
+      Great job at <b>${st.name}</b>!<br><br>
+      You have collected <b>${gameState.hats} / ${HAT_MAX}</b> Chef Hats 👨‍🍳.<br>
+      ${neededHats > 0 ? `You need <b>${neededHats}</b> more hats to pass the exam!` : '<span style="color:#2c8350; font-weight:bold;">Awesome! You have enough hats to pass! Keep going!</span>'}
+    </div>
+    <div style="text-align:center; margin-top:16px;">
+      <button class="bigBtn" id="continueExploringBtn">Continue Exploring ➔</button>
+    </div>
+  `;
+
+  document.getElementById("continueExploringBtn").onclick = () => {
+    document.getElementById("quiz-modal").style.display = "none";
+    gameState.modalOpen = false;
+    showChecklistModal();
+    if(gameState.currentMission >= STATIONS.length) setTimeout(showVictory, 400);
+  };
+}
+
+function showVictory(){
+  Sound.victory();
+  const acc = gameState.attempts > 0 ? Math.round((gameState.correctAnswers/gameState.attempts)*100) : 0;
+  const passed = gameState.hats >= 22;
+
+  document.getElementById("starsDisplay").textContent = passed ? (gameState.hats >= 28 ? "⭐⭐⭐" : "⭐⭐") : "❌";
+  document.getElementById("victoryHeader").textContent = passed ? "🏆 MASTER CHEF! 🏆" : "💔 REVISION FAILED!";
+  document.getElementById("victoryHeader").style.color = passed ? "var(--red)" : "var(--brown)";
+  document.getElementById("victoryTitle").textContent = passed ? "3-Star Master Chef!" : "You collected less than 22 Hats. You need to review!";
+  document.getElementById("vHats").textContent = gameState.hats + "/" + HAT_MAX;
+  document.getElementById("vAcc").textContent = acc + "%";
+  document.getElementById("screen-victory").style.display = "flex";
+}
+
+renderMenu();
 </script>
 </body>
 </html>
