@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Grid + Joystick Test</title>
+<style>
+  * { box-sizing: border-box; user-select: none; touch-action: none; }
+  body, html { margin: 0; padding: 0; width: 100vw; height: 100vh; overflow: hidden; background: #241505; font-family: sans-serif; }
+  
+  #game-container {
+    width: 100vw; height: 100vh; display: flex; align-items: center; justify-content: center;
+  }
+
+  /* COZINHA EM GRID RESPONSIVO 8x6 */
+  #grid-map {
+    position: relative;
+    width: 95vw; height: 95vh;
+    max-width: 900px; max-height: 500px;
+    background: #e6c89c; border: 5px solid #5c3618; border-radius: 16px;
+    display: grid;
+    grid-template-columns: repeat(8, 1fr);
+    grid-template-rows: repeat(6, 1fr);
+    gap: 4px; padding: 6px;
+  }
+
+  /* CELULAS DO GRID */
+  .cell {
+    background: rgba(140, 83, 43, 0.15); border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    position: relative;
+  }
+
+  /* BALCÕES / ESTAÇÕES */
+  .counter {
+    background: #8c532b; border: 3px solid #5c3618; border-radius: 10px;
+    width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;
+  }
+  .counter img { width: 75%; height: 75%; object-fit: contain; }
+
+  /* AVATAR DENTRO DO GRID */
+  #player {
+    position: absolute; width: 48px; height: 48px;
+    z-index: 50; transform: translate(-50%, -50%);
+    pointer-events: none; transition: left 0.05s linear, top 0.05s linear;
+  }
+  #player img { width: 100%; height: 100%; object-fit: contain; }
+
+  /* JOYSTICK FLUTUANTE AREA */
+  #joystick-zone {
+    position: fixed; left: 20px; bottom: 20px; width: 130px; height: 130px;
+    background: rgba(255,255,255,0.2); border: 3px solid rgba(255,255,255,0.4);
+    border-radius: 50%; z-index: 100; touch-action: none;
+    display: flex; align-items: center; justify-content: center;
+  }
+  #joystick-stick {
+    width: 50px; height: 50px; background: rgba(255,140,66,0.9);
+    border: 3px solid #fff; border-radius: 50%;
+    position: absolute; pointer-events: none;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+  }
+</style>
+</head>
+<body>
+
+<div id="game-container">
+  <div id="grid-map">
+    <!-- Células do Grid de Exemplo -->
+    <div class="cell"><div class="counter"><img src="https://i.imgur.com/9dBpziU.png"></div></div>
+    <div class="cell"></div><div class="cell"></div><div class="cell"></div>
+    <div class="cell"></div><div class="cell"></div><div class="cell"></div>
+    <div class="cell"><div class="counter"><img src="https://i.imgur.com/FzL7piC.png"></div></div>
+    
+    <!-- Linhas do meio vazias para caminhar -->
+    <div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div>
+    <div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div>
+    
+    <div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div>
+    <div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div>
+
+    <div class="cell"><div class="counter"><img src="https://i.imgur.com/3UZJWi0.gif"></div></div>
+    <div class="cell"></div><div class="cell"></div><div class="cell"></div>
+    <div class="cell"></div><div class="cell"></div><div class="cell"></div>
+    <div class="cell"><div class="counter"><img src="https://i.imgur.com/2FIVtfd.png"></div></div>
+
+    <!-- AVATAR CAPIVARA -->
+    <div id="player">
+      <img src="https://i.imgur.com/lGMaZEs.png">
+    </div>
+  </div>
+</div>
+
+<!-- JOYSTICK FLUTUANTE -->
+<div id="joystick-zone">
+  <div id="joystick-stick"></div>
+</div>
+
+<script>
+  const player = document.getElementById('player');
+  const map = document.getElementById('grid-map');
+  const zone = document.getElementById('joystick-zone');
+  const stick = document.getElementById('joystick-stick');
+
+  let pos = { x: 200, y: 150 };
+  let moveDir = { x: 0, y: 0 };
+  let isTouching = false;
+
+  // Atualiza Posição do Player
+  function updatePlayer(){
+    player.style.left = pos.x + 'px';
+    player.style.top = pos.y + 'px';
+  }
+  updatePlayer();
+
+  // Lógica do Joystick
+  const maxRadius = 40;
+  const zoneRect = zone.getBoundingClientRect();
+  const centerX = zoneRect.left + zoneRect.width / 2;
+  const centerY = zoneRect.top + zoneRect.height / 2;
+
+  zone.addEventListener('pointerdown', handlePointer);
+  zone.addEventListener('pointermove', handlePointer);
+  window.addEventListener('pointerup', resetJoystick);
+
+  function handlePointer(e){
+    if(e.type === 'pointerdown') isTouching = true;
+    if(!isTouching) return;
+
+    const dx = e.clientX - centerX;
+    const dy = e.clientY - centerY;
+    const dist = Math.hypot(dx, dy);
+    const angle = Math.atan2(dy, dx);
+
+    const clampDist = Math.min(dist, maxRadius);
+    const stickX = Math.cos(angle) * clampDist;
+    const stickY = Math.sin(angle) * clampDist;
+
+    stick.style.transform = `translate(${stickX}px, ${stickY}px)`;
+
+    // Normaliza velocidade (-1 a 1)
+    moveDir.x = Math.cos(angle) * (clampDist / maxRadius);
+    moveDir.y = Math.sin(angle) * (clampDist / maxRadius);
+  }
+
+  function resetJoystick(){
+    isTouching = false;
+    stick.style.transform = 'translate(0px, 0px)';
+    moveDir = { x: 0, y: 0 };
+  }
+
+  // Loop de Movimento Fluido
+  function gameLoop(){
+    if(moveDir.x !== 0 || moveDir.y !== 0){
+      const speed = 4;
+      const mapRect = map.getBoundingClientRect();
+      
+      pos.x = Math.min(Math.max(pos.x + moveDir.x * speed, 30), mapRect.width - 30);
+      pos.y = Math.min(Math.max(pos.y + moveDir.y * speed, 30), mapRect.height - 30);
+      
+      updatePlayer();
+    }
+    requestAnimationFrame(gameLoop);
+  }
+  gameLoop();
+</script>
+</body>
+</html>
